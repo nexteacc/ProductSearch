@@ -1,0 +1,127 @@
+:root {
+  color-scheme: light dark;
+  --font-body: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --text: light-dark(#1d1d1f, #f5f5f7);
+  --secondary: light-dark(#606064, #aeaeb2);
+  --surface: light-dark(#ffffff, #242426);
+  --window: light-dark(#f5f5f7, #1c1c1e);
+  --sidebar: light-dark(#ebebed, #29292c);
+  --separator: light-dark(#d1d1d6, #48484a);
+  --accent: light-dark(#007aff, #0a84ff);
+  --selected: var(--accent);
+  --on-accent: light-dark(#000000, #000000);
+  --selected-text: #ffffff;
+  --danger: light-dark(#ba1a1a, #ff6961);
+  --success: light-dark(#237b36, #62d076);
+  --warning: light-dark(#b57900, #ffd60a);
+  --hover: light-dark(#00000008, #ffffff0c);
+  --focus: var(--accent);
+  --scrim: #00000050;
+  --shadow: 0 12px 48px #00000030;
+  --radius-control: 6px;
+  --radius-panel: 10px;
+  --radius-sheet: 12px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 20px;
+  --space-xl: 28px;
+  --text-small: 11px;
+  --text-body: 13px;
+  --text-title: 20px;
+  --sidebar-width: 208px;
+  --toolbar-height: 60px;
+  --control-height: 28px;
+  --card-image-height: 160px;
+  --scrollbar-thumb: var(--secondary);
+  --scrollbar-track: transparent;
+  --motion-fast: 120ms;
+  --line-height: 1.5;
+}
+html {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  color: var(--text);
+  background: transparent;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+body {
+  margin: 0;
+}
+* {
+  box-sizing: border-box;
+}
+button,
+input,
+a {
+  font: inherit;
+}
+button,
+input {
+  color: inherit;
+}
+button,
+a {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+button:hover:not(:disabled) {
+  background: var(--hover);
+}
+button:active:not(:disabled) {
+  filter: brightness(0.94);
+}
+[hidden] {
+  display: none;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border: 3px solid var(--window);
+  border-radius: var(--radius-control);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text);
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .sidebar {
+    background: var(--sidebar);
+  }
+}
+@media (forced-colors: active) {
+  :root {
+    --accent: Highlight;
+    --text: CanvasText;
+    --surface: Canvas;
+    --window: Canvas;
+    --selected: Highlight;
+    --selected-text: HighlightText;
+    --separator: CanvasText;
+    --focus: Highlight;
+  }
+  html {
+    scrollbar-color: auto;
+  }
+}

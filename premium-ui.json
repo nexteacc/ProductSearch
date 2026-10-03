@@ -1,0 +1,17 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["src"],
+  "locale": "zh-CN",
+  "canonicalMap": "UX-CONTRACT.md",
+  "requiredCapabilities": ["Form", "Scrollbar", "Toast", "CRUD"],
+  "commands": {
+    "unit": "npm test",
+    "typecheck": "npm run typecheck",
+    "build": "npm run build"
+  },
+  "requiredCommands": ["unit", "typecheck", "build"],
+  "evidence": {
+    "crudFullFlow": "tests/core.test.ts",
+    "failurePaths": "tests/core.test.ts"
+  }
+}

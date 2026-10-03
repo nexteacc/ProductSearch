@@ -1,0 +1,16 @@
+node_modules/
+dist/
+release/
+verification/
+*.log
+.env*
+.DS_Store
+premium-audit.json
+*.enc
+*.pem
+*.key
+connection.json
+settings.json
+usage.json
+*.zip
+*.dmg
