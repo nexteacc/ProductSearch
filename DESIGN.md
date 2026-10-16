@@ -1,7 +1,7 @@
 ---
 version: alpha
-name: 商品研究
-description: 面向商品研究人员的本地 macOS 工作台
+name: Product Search
+description: 面向选品人员的本地 macOS 工作台
 typography:
   body:
     fontFamily: '-apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif'
@@ -23,7 +23,7 @@ omitted:
     reason: 组件消费共享 CSS 变量，不另建重复配置
 ---
 
-# 商品研究视觉系统
+# Product Search 视觉系统
 
 ## Overview
 

@@ -2,7 +2,7 @@
 
 ## Product context
 
-商品研究本地测试版；中文界面，美国站。本机时区显示日期；支持当前 macOS 15.8 Intel 测试，其他设备未验收。无障碍目标 WCAG 2.2 AA，尚不宣称全项通过。
+Product Search 本地测试版；中文界面，美国站。本机时区显示日期；支持当前 macOS 15.8 Intel 测试，其他设备未验收。无障碍目标 WCAG 2.2 AA，尚不宣称全项通过。
 
 ## Business-context sources
 
@@ -28,7 +28,15 @@ DESIGN.md 说明意图；src/ui/theme.css 为主题值源，components.css 为�
 | Toast      | renderer.ts status / globalNotice  | 本契约             | persistent success / error | desktop smoke                      |
 | CRUD       | Service / renderer.ts              | 交付计划 / 本契约  | create / read / cancel     | tests/core.test.ts                 |
 
-Select/Listbox、Date、Table Selection 不适用；第一版没有下拉、日期选择与批量行选择。
+Select/Listbox 由 renderer.ts 的原生 select 承载，平台拥有弹出菜单外观与键盘行为；用于美国目标站点和采集量。Date、Table Selection 不适用。
+
+## Target market
+
+新建选品任务只填写选品产品、关键词、目标站点和平台采集量。美国站内部固定使用纽约 Brooklyn 11201，不展示邮编输入；历史任务原始配置保持不变，重新运行使用固定默认值。每个平台打开搜索页面后、保存首批记录前，先读取地区设置；不符合时通过网站正常表单调整一次并重新验证。不在新建表单和结果行重复展示地区实现说明。普通地区设置失败只停止该平台；验证码、登录或控制权丢失保持现有安全停止边界。Pinterest 使用全球站与任务关键词，不修改账号个人国家信息，不声称结果仅来自美国。来源：用户 2026-10-13 本次功能及文案要求；src/domain.ts、src/collector.mjs。
+
+## Browser connection
+
+Ego Lite 为唯一浏览器引擎。自动发现用户命令、当前安装版本及系统／用户应用目录中的命令入口，调用其内置自动启动流程并验证实际就绪标记。设置页仅显示 Ego Lite 状态与检查连接；检查过程中按钮禁用。缺失安装、未完成首次引导、超时或系统授权失败分别显示可操作提示，不把退出码 0 当成连接证明，不要求输入路径或选择应用。保留旧设置文件但不再依赖历史手填路径。ProductResearch 内部应用名称、应用标识和数据目录不改，仅更新用户可见名称。
 
 ## Dataset navigation
 

@@ -76,7 +76,7 @@ export class Service extends EventEmitter {
     let egoReady = false,
       egoMessage = "";
     try {
-      await this.adapters.preflight(this.settings.egoPath);
+      await this.adapters.preflight();
       egoReady = true;
     } catch (error) {
       egoMessage = (error as Error).message;
@@ -226,9 +226,7 @@ export class Service extends EventEmitter {
       if (enabled && !engine) throw new Error("判断引擎尚未支持。");
       const key =
         enabled && engine!.requiresKey ? await this.secrets.get() : "";
-      const cli = run.sourceRunId
-        ? ""
-        : await this.adapters.preflight(this.settings.egoPath);
+      const cli = run.sourceRunId ? "" : await this.adapters.preflight();
       controller.signal.throwIfAborted();
       await atomicJson(join(this.store.dir(id), "rule.json"), {
         enabled,

@@ -31,11 +31,11 @@ export function issueFor(error: unknown, stage?: string): Issue {
       "部分本地数据无法读取。",
       "原文件已保留，请检查该任务；不要删除数据目录。",
     );
-  if (/未找到 ego-browser/.test(text))
+  if (/未找到 (ego-browser|Ego Lite)/.test(text))
     return issue(
       "browser_missing",
-      "未找到浏览器引擎。",
-      "安装 Ego Lite，并在设置中检查浏览器连接。",
+      "未找到 Ego Lite。",
+      "安装 Ego Lite，完成首次启动引导后点击检查连接。",
     );
   if (/Ego Lite|采集命令无法启动/.test(text))
     return issue(

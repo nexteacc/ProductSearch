@@ -9,7 +9,7 @@ import {
   shell,
   dialog,
 } from "electron";
-import { join, basename } from "node:path";
+import { join } from "node:path";
 import { readFile, access, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { Service, type Secrets, type Settings } from "./service";
@@ -21,6 +21,7 @@ import { seedDesktopFixture } from "./desktop-fixture";
 import { issueFor, safeMessage } from "./issues";
 declare const __TEST_ENABLED__: boolean;
 app.setName("ProductResearch");
+app.setAboutPanelOptions({ applicationName: "Product Search" });
 const selfTest = process.argv.includes("--self-test");
 const verifyStart = process.argv.includes("--verify-start");
 if (selfTest && !__TEST_ENABLED__)
@@ -182,19 +183,12 @@ async function dispatch(method: string, args: unknown[]) {
     };
   if (method === "saveSettings") {
     const values = args[0] as {
-      egoPath?: string;
       apiKey?: string;
       judgmentEnabled?: boolean;
       judgmentEngine?: string;
     };
     if (!values || typeof values !== "object")
       throw new Error("设置格式无效。");
-    if (
-      values.egoPath &&
-      (!values.egoPath.startsWith("/") ||
-        basename(values.egoPath) !== "ego-browser")
-    )
-      throw new Error("请选择 ego-browser 的绝对路径。");
     if (
       values.judgmentEnabled !== undefined &&
       typeof values.judgmentEnabled !== "boolean"
@@ -207,7 +201,6 @@ async function dispatch(method: string, args: unknown[]) {
       values.judgmentEnabled ?? service.settings.judgmentEnabled ?? true;
     service.settings.judgmentEngine =
       values.judgmentEngine ?? service.settings.judgmentEngine ?? "jev";
-    service.settings.egoPath = values.egoPath || undefined;
     await atomicJson(join(root, "settings.json"), service.settings);
     return { saved: true };
   }
@@ -235,7 +228,7 @@ function showWindow() {
     height: 780,
     minWidth: 760,
     minHeight: 540,
-    title: "商品研究",
+    title: "Product Search",
     titleBarStyle: "hiddenInset",
     vibrancy: appearance().reducedTransparency ? undefined : "sidebar",
     visualEffectState: "followWindow",
@@ -302,7 +295,7 @@ if (!app.requestSingleInstanceLock()) {
       Menu.setApplicationMenu(
         Menu.buildFromTemplate([
           {
-            label: "商品研究",
+            label: "Product Search",
             submenu: [
               { role: "about" },
               {
@@ -325,7 +318,7 @@ if (!app.requestSingleInstanceLock()) {
             label: "文件",
             submenu: [
               {
-                label: "新建任务…",
+                label: "新建选品任务…",
                 accelerator: "CmdOrCtrl+N",
                 click: () => {
                   showWindow();
@@ -352,7 +345,7 @@ if (!app.requestSingleInstanceLock()) {
             submenu: [
               { role: "minimize" },
               { role: "zoom" },
-              { label: "显示商品研究", click: showWindow },
+              { label: "显示 Product Search", click: showWindow },
             ],
           },
         ]),
@@ -504,7 +497,7 @@ if (!app.requestSingleInstanceLock()) {
     .catch((error) => {
       const issue = issueFor(error, "startup");
       dialog.showErrorBox(
-        "商品研究无法启动",
+        "Product Search 无法启动",
         `${issue.message} ${issue.action}`,
       );
       app.quit();

@@ -14,12 +14,13 @@ export const tools = [
   {
     name: "create_research_task",
     description:
-      "创建美国站商品研究任务；仅启用判断时需要 API Key，省略判断配置则使用应用设置。",
+      "创建美国站选品任务；仅启用判断时需要 API Key，省略判断配置则使用应用设置。",
     inputSchema: {
       type: "object",
       properties: {
         theme: { type: "string" },
         keyword: { type: "string" },
+        region: { type: "string", enum: ["US"], default: "US" },
         judgment: {
           type: "object",
           properties: {
@@ -67,7 +68,7 @@ export const tools = [
   },
   {
     name: "list_research_tasks",
-    description: "查看持久化任务记录。",
+    description: "查看已保存的选品任务记录。",
     inputSchema: {
       type: "object",
       properties: {},
@@ -188,7 +189,7 @@ async function rpc(method: string, args: unknown[]) {
       await readFile(join(root, "connection.json"), "utf8"),
     );
   } catch {
-    throw new Error("请先启动商品研究应用。");
+    throw new Error("请先启动 Product Search 应用。");
   }
   if (
     !Number.isInteger(connection.port) ||

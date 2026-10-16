@@ -1,7 +1,7 @@
 import { readFile, writeFile, rename, appendFile } from "node:fs/promises";
 import { join } from "node:path";
 const { config, dir, budget } = globalThis.COLLECTION_INPUT;
-const task = await taskSpace(`商品研究 · ${config.theme}`);
+const task = await taskSpace(`选品 · ${config.theme}`);
 const page = task.page("p1");
 const raw = new Map();
 const results = [];
@@ -167,6 +167,122 @@ const capture = (platform, items, sourceUrl, pageNumber) => {
 };
 const countFor = (p) =>
   [...raw.values()].filter((x) => x.platform === p).length;
+const readRegion = async (platform) =>
+  page.evaluate(
+    (platform) =>
+      platform === "amazon"
+        ? (document.querySelector("#glow-ingress-line2")?.textContent?.trim() ??
+          null)
+        : (document
+            .querySelector('a[aria-label^="Update your settings"]')
+            ?.getAttribute("aria-label") ?? null),
+    platform,
+  );
+const matchesRegion = (platform, value) =>
+  platform === "amazon"
+    ? !!value &&
+      new RegExp(`\\b${config.amazonPostalCode ?? "11201"}\\b`).test(value)
+    : !!value &&
+      value.includes("United States") &&
+      value.includes("USD") &&
+      value.includes("English (US)");
+const ensureRegion = async (platform, searchUrl, result) => {
+  result.observedRegion = await readRegion(platform);
+  emit({
+    type: "region_checked",
+    platform,
+    observedRegion: result.observedRegion,
+    message: `目标美国站；当前设置：${result.observedRegion ?? "未能读取"}`,
+  });
+  if (matchesRegion(platform, result.observedRegion)) return;
+  await check();
+  emit({
+    type: "region_adjusting",
+    platform,
+    message:
+      platform === "amazon"
+        ? `设置美国配送邮编 ${config.amazonPostalCode ?? "11201"}`
+        : "设置 Etsy United States／English (US)／USD",
+  });
+  try {
+    if (platform === "amazon") {
+      await page.click("#nav-global-location-popover-link");
+      await page.waitForSelector("#GLUXZipUpdateInput", { timeout: 10000 });
+      await inspect(platform);
+      await check();
+      await page.fill(
+        "#GLUXZipUpdateInput",
+        config.amazonPostalCode ?? "11201",
+      );
+      await page.click("#GLUXZipUpdate");
+      await page.waitForFunction(
+        () =>
+          !document.querySelector("#GLUXZipUpdateInput")?.getClientRects()
+            .length,
+        undefined,
+        { timeout: 10000 },
+      );
+      await page.waitForSelector('button[name="glowDoneButton"]', {
+        timeout: 10000,
+      });
+      await inspect(platform);
+      await check();
+      await page.click('button[name="glowDoneButton"]');
+    } else {
+      await page.click('a[aria-label^="Update your settings"]');
+      await page.waitForSelector("#locale-overlay-select-region_code", {
+        timeout: 10000,
+      });
+      await inspect(platform);
+      await check();
+      await page.selectOption("#locale-overlay-select-region_code", "US");
+      await page.selectOption("#locale-overlay-select-language_code", "en-US");
+      await page.selectOption("#locale-overlay-select-currency_code", "USD");
+      await page.click('button[name="save"]');
+      await page.waitForFunction(
+        () =>
+          !document.querySelector("#locale-overlay-select-region_code") &&
+          document
+            .querySelector('a[aria-label^="Update your settings"]')
+            ?.getAttribute("aria-label")
+            ?.includes("USD"),
+        undefined,
+        { timeout: 10000 },
+      );
+    }
+    await check();
+    await page.waitForLoadState("load", { timeout: 10000 });
+    await navigate(
+      searchUrl,
+      platform,
+      platform === "amazon"
+        ? '[data-component-type="s-search-result"][data-asin]'
+        : "[data-listing-card-v2][data-listing-id]",
+    );
+    result.observedRegion = await readRegion(platform);
+    if (!matchesRegion(platform, result.observedRegion))
+      throw new Error("region_unconfirmed");
+    emit({
+      type: "region_adjusted",
+      platform,
+      observedRegion: result.observedRegion,
+      message: `已调整并验证：${result.observedRegion}`,
+    });
+  } catch (error) {
+    if (
+      ["blocked", "login", "cancelled"].includes(error.message) ||
+      /ownership|control|inactive|unassigned/i.test(error.message)
+    )
+      throw error;
+    emit({
+      type: "region_adjustment_failed",
+      platform,
+      observedRegion: result.observedRegion,
+      message: `无法确认美国地区设置（${result.observedRegion ?? "未读取"}）；本平台停止，继续其他平台。`,
+    });
+    throw new Error("region_adjustment_failed");
+  }
+};
 emit({
   type: "browser_space",
   spaceId: task.spaceId,
@@ -229,6 +345,7 @@ try {
               ? '[data-component-type="s-search-result"][data-asin]'
               : "[data-listing-card-v2][data-listing-id]",
           );
+          if (pageNumber === 1) await ensureRegion(platform, next, result);
           const output = await page.evaluate(
             ({ platform, pageNumber }) => {
               if (platform === "amazon") {
@@ -338,19 +455,7 @@ try {
             { platform, pageNumber },
           );
           result.observedRegion = output.region;
-          if (
-            platform === "etsy" &&
-            (!output.region?.includes("United States") ||
-              !output.region?.includes("USD"))
-          )
-            throw new Error("region_unconfirmed");
-          if (
-            platform === "amazon" &&
-            output.region &&
-            /China|Canada|United Kingdom|India|Germany|France|Japan|Singapore/i.test(
-              output.region,
-            )
-          )
+          if (!matchesRegion(platform, output.region))
             throw new Error("region_unconfirmed");
           result.count = capture(
             platform,
@@ -383,6 +488,12 @@ try {
         const url = `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(config.keyword)}`;
         await navigate(url, platform, 'a[href*="/pin/"]');
         result.observedRegion = "www.pinterest.com";
+        emit({
+          type: "region_scope",
+          platform,
+          message:
+            "Pinterest 全球站：使用任务关键词，不自动修改账号国家，不保证搜索结果仅来自美国。",
+        });
         let stagnant = 0;
         for (
           let step = 0;
@@ -492,23 +603,22 @@ try {
         "blocked",
         "login",
         "region_unconfirmed",
+        "region_adjustment_failed",
         "empty_or_changed",
       ];
       result.stopReason = controlled.includes(reason)
         ? reason
         : "navigation_or_extraction_failed";
-      result.status = ["blocked", "login", "region_unconfirmed"].includes(
-        reason,
-      )
+      result.status = [
+        "blocked",
+        "login",
+        "region_unconfirmed",
+        "region_adjustment_failed",
+      ].includes(reason)
         ? "blocked"
         : "failed";
       controlLost ||= /ownership|control|inactive|unassigned/i.test(reason);
-      if (
-        ["cancelled", "blocked", "login", "region_unconfirmed"].includes(
-          reason,
-        ) ||
-        controlLost
-      ) {
+      if (["cancelled", "blocked", "login"].includes(reason) || controlLost) {
         abortAll = true;
         emit({
           type: "browser_stopped",

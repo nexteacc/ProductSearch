@@ -56,6 +56,9 @@ const paths = await packager({
   prune: false,
   tmpdir: packageTemp,
   appBundleId: "local.productresearch.desktop",
+  extendInfo: {
+    CFBundleDisplayName: "Product Search",
+  },
 });
 const archive = join(
   paths[0],

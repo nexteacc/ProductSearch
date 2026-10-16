@@ -24,6 +24,7 @@ export interface Config {
   judgment?: { enabled: boolean; engine: string };
   judgmentRule?: string;
   region: "US";
+  amazonPostalCode?: string;
   platforms: Platform[];
   targets: Record<Platform, number>;
   requestId?: string;
@@ -93,7 +94,8 @@ export const defaults = {
   pinterest: collectionPolicy.defaultTarget,
 };
 export const defaultJudgmentRule =
-  "仅根据这条已采集的页面信息，它是否明确符合研究主题，并有足够具体的信息，值得纳入给业务人员追踪相关商品风格与趋势的今日候选名单？Pinterest 不要求有购买链接。";
+  "仅根据这条已采集的页面信息，它是否与选品产品明确相关，并有足够具体的信息，值得纳入给业务人员追踪相关商品风格与趋势的今日候选名单？Pinterest 不要求有购买链接。";
+export const defaultAmazonPostalCode = "11201";
 export function validateConfig(input: unknown): Config {
   if (!input || typeof input !== "object" || Array.isArray(input))
     throw new Error("任务配置无效。");
@@ -114,7 +116,7 @@ export function validateConfig(input: unknown): Config {
       !(c[field] as string).trim() ||
       (c[field] as string).length > 200
     )
-      throw new Error("请填写不超过 200 字的主题与关键词。");
+      throw new Error("请填写不超过 200 字的选品产品与搜索关键词。");
   if (c.region !== undefined && c.region !== "US")
     throw new Error("第一版只支持美国站。");
   if (
@@ -162,6 +164,7 @@ export function validateConfig(input: unknown): Config {
       ? { judgmentRule: (c.judgmentRule as string).trim() }
       : {}),
     region: "US",
+    amazonPostalCode: defaultAmazonPostalCode,
     platforms: c.platforms as Platform[],
     targets,
     ...(c.requestId ? { requestId: c.requestId as string } : {}),

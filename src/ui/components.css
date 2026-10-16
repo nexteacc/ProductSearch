@@ -232,13 +232,21 @@
   margin: var(--space-md) 0;
 }
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   width: 100%;
   min-height: var(--control-height);
   border: 1px solid var(--separator);
   border-radius: var(--radius-control);
   padding: var(--space-xs) var(--space-sm);
   background: var(--surface);
+}
+.field select {
+  font: inherit;
+  color: var(--text);
+}
+.field .muted {
+  margin: 0;
 }
 .field textarea {
   resize: vertical;
@@ -628,6 +636,34 @@ dialog::backdrop {
 dialog h2 {
   font-size: 16px;
   margin: 0 0 var(--space-lg);
+}
+.judgment-dialog {
+  width: min(560px, calc(100vw - 40px));
+}
+.judgment-dialog h2 {
+  margin-bottom: var(--space-sm);
+}
+.judgment-dialog .muted {
+  margin: 0;
+}
+.judgment-dialog .field {
+  gap: var(--space-sm);
+  margin: var(--space-lg) 0 0;
+}
+.judgment-dialog textarea {
+  min-height: 170px;
+  max-height: min(360px, 40vh);
+  padding: var(--space-md);
+  color: var(--text);
+  font-family: var(--font-body);
+  overflow-y: auto;
+}
+.judgment-dialog .status-line:empty {
+  display: none;
+}
+.judgment-dialog .dialog-actions {
+  border-top: 1px solid var(--separator);
+  padding-top: var(--space-md);
 }
 .dialog-actions {
   display: flex;

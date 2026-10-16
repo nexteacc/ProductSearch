@@ -77,6 +77,7 @@ const reasons: Record<string, string> = {
   blocked: "平台验证或访问受限",
   login: "需要登录",
   region_unconfirmed: "美国地区未确认",
+  region_adjustment_failed: "美国地区自动设置失败；其他平台继续执行",
   empty_or_changed: "没有结果或页面结构变化",
   navigation_or_extraction_failed: "页面导航或提取失败",
   previous_environment_stop: "前一平台环境检查已停止",
@@ -158,7 +159,7 @@ const sidebar = el(
   "aside",
   { class: "sidebar" },
   el("header"),
-  el("h2", {}, "商品研究"),
+  el("h2", {}, "Product Search"),
 );
 const environmentLabel = el(
   "button",
@@ -183,7 +184,7 @@ const workView = el("section", { id: "work-view" }),
   settingsView = el("section", { id: "settings-view", hidden: "" });
 const title = el("h1", {}, "工作台");
 const newTask = button(
-  "新建任务",
+  "新建选品任务",
   () => {
     judgmentEnabled = autoJudgment.checked;
     judgmentField.hidden = !judgmentEnabled;
@@ -210,7 +211,7 @@ const workspace = el("main", { class: "workspace" }, toolbar, content);
 const nav: Record<string, HTMLButtonElement> = {};
 for (const [name, label] of Object.entries({
   work: "工作台",
-  history: "任务记录",
+  history: "选品任务记录",
   settings: "设置",
 })) {
   nav[name] = button(label, () => showView(name), "nav-button", {
@@ -228,8 +229,9 @@ function showView(name: string) {
   historyView.hidden = name !== "history";
   settingsView.hidden = name !== "settings";
   title.textContent =
-    { work: "工作台", history: "任务记录", settings: "设置" }[name] || "工作台";
-  document.title = `${title.textContent} — 商品研究`;
+    { work: "工作台", history: "选品任务记录", settings: "设置" }[name] ||
+    "工作台";
+  document.title = `${title.textContent} — Product Search`;
   if (name === "settings") void loadSettings();
 }
 function report(error: unknown) {
@@ -242,8 +244,13 @@ const composer = el("dialog", {
   "aria-labelledby": "composer-title",
 });
 const form = el("form", { id: "task-form", novalidate: "" });
-const theme = field("theme", "研究主题", "豹纹手机壳"),
+const theme = field("theme", "选品产品", "豹纹手机壳"),
   keyword = field("keyword", "搜索关键词", "leopard phone case");
+const site = el(
+  "select",
+  { id: "target-site" },
+  el("option", { value: "US" }, "美国（US）"),
+);
 const judgmentRule = el("textarea", {
   id: "judgment-rule",
   rows: "4",
@@ -305,12 +312,17 @@ const composerClose = button("取消", () => composer.close(), "button", {
   id: "composer-close",
 });
 form.append(
-  el("h2", { id: "composer-title" }, "新建研究任务"),
+  el("h2", { id: "composer-title" }, "新建选品任务"),
   theme.node,
   keyword.node,
+  el(
+    "div",
+    { class: "field" },
+    el("label", { for: "target-site" }, "目标站点"),
+    site,
+  ),
   judgmentField,
   platformGroup,
-  el("p", { class: "muted" }, "美国站"),
   formError,
   el("div", { class: "dialog-actions" }, composerClose, submit),
 );
@@ -327,6 +339,7 @@ form.addEventListener("submit", async (e) => {
     const config = validateConfig({
       theme: theme.input.value,
       keyword: keyword.input.value,
+      region: site.value,
       judgmentRule: judgmentEnabled ? judgmentRule.value : undefined,
       judgment: { enabled: judgmentEnabled, engine: "jev" },
       platforms: (Object.keys(names) as Platform[]).filter(
@@ -389,9 +402,8 @@ form.addEventListener("submit", async (e) => {
 const empty = el(
   "div",
   { class: "empty" },
-  el("h2", {}, "开始一份商品研究"),
-  el("p", {}, "创建任务，采集三个平台的页面信息并筛选候选名单。"),
-  button("新建任务", () => composer.showModal(), "button primary"),
+  el("h2", {}, "创建你的第一个选品任务"),
+  button("新建选品任务", () => composer.showModal(), "button primary"),
 );
 const taskTitle = el("h2"),
   taskSubtitle = el("div", { class: "muted" }),
@@ -405,6 +417,7 @@ const rerun = button("重新运行", () => {
   if (!state.run) return;
   theme.input.value = state.run.config.theme;
   keyword.input.value = state.run.config.keyword;
+  site.value = state.run.config.region;
   judgmentRule.value = state.run.config.judgmentRule ?? defaultJudgmentRule;
   judgmentEnabled = state.run.config.judgment?.enabled !== false;
   judgmentField.hidden = !judgmentEnabled;
@@ -423,12 +436,17 @@ const judgeExistingButton = button("判断这批数据", async () => {
   const sourceId = state.runId;
   const rule = el("textarea", {
     id: "existing-rule",
-    rows: "4",
-    "aria-label": "判断规则",
+    rows: "8",
+    maxlength: "2000",
+    "aria-describedby": "existing-rule-hint",
   });
   rule.value = state.run?.config.judgmentRule || defaultJudgmentRule;
   const message = el("p", { role: "status", class: "status-line" });
-  const dialog = el("dialog", { "aria-label": "判断已采集数据" });
+  const dialog = el("dialog", {
+    class: "judgment-dialog",
+    "aria-labelledby": "existing-judgment-title",
+    "aria-describedby": "existing-judgment-description",
+  });
   const start = button(
     "开始判断",
     async () => {
@@ -448,8 +466,19 @@ const judgeExistingButton = button("判断这批数据", async () => {
     "button primary",
   );
   dialog.append(
-    el("h2", {}, "判断这批数据"),
-    rule,
+    el("h2", { id: "existing-judgment-title" }, "判断这批数据"),
+    el(
+      "p",
+      { id: "existing-judgment-description", class: "muted" },
+      `共 ${state.run?.collected ?? 0} 条，使用已有数据。结果另存为新任务。`,
+    ),
+    el(
+      "div",
+      { class: "field" },
+      el("label", { for: "existing-rule" }, "判断规则"),
+      rule,
+      el("p", { id: "existing-rule-hint", class: "muted" }, "最多 2000 字"),
+    ),
     message,
     el(
       "div",
@@ -461,6 +490,9 @@ const judgeExistingButton = button("判断这批数据", async () => {
   dialog.addEventListener("close", () => dialog.remove());
   document.body.append(dialog);
   dialog.showModal();
+  rule.focus();
+  rule.setSelectionRange(0, 0);
+  rule.scrollTop = 0;
 });
 const summary = el("div", { class: "summary" });
 const taskHead = el(
@@ -751,7 +783,9 @@ function showCandidate(row: Candidate, reveal = true) {
       el("dt", {}, label as string),
       el(
         "dd",
-        {},
+        label === "推荐分"
+          ? { title: "与判断规则的匹配程度，不代表销量或商品质量" }
+          : {},
         label === "平台"
           ? platformLabel(row.platform)
           : String(value || "未采集"),
@@ -761,13 +795,6 @@ function showCandidate(row: Candidate, reveal = true) {
     image(row, "detail-image"),
     el("h3", { id: "candidate-title", class: "detail-title" }, row.title),
     facts,
-    el(
-      "p",
-      { class: "muted" },
-      row.recommendationScore === undefined
-        ? "未进行自动判断"
-        : "推荐分不代表销量或商品质量。",
-    ),
   );
   if (row.url)
     detailContent.append(
@@ -952,7 +979,7 @@ function renderRun() {
         "div",
         { class: "notice" },
         platformLabel(p.platform),
-        ` · ${p.count} / ${p.target} 条 · ${p.stopReason ? reasons[p.stopReason] || p.stopReason : "待采集"}`,
+        ` · ${p.count} / ${p.target} 条 · ${p.stopReason ? reasons[p.stopReason] || p.stopReason : "待采集"}${p.observedRegion ? ` · ${p.observedRegion}` : ""}`,
       ),
     ),
   );
@@ -983,7 +1010,7 @@ async function loadResults() {
   renderRows();
 }
 function renderHistory() {
-  historyView.replaceChildren(el("h2", {}, "任务记录"));
+  historyView.replaceChildren(el("h2", {}, "选品任务记录"));
   if (!state.runs.length) {
     historyView.append(el("p", { class: "muted" }, "尚无任务。"));
     return;
@@ -1037,7 +1064,6 @@ key.node.replaceChildren(
   el("div", { class: "key-field" }, key.input, reveal),
   key.error,
 );
-const egoPath = field("ego-path", "浏览器路径");
 const autoJudgment = el("input", {
   type: "checkbox",
   id: "auto-judgment",
@@ -1059,6 +1085,7 @@ const settingsStatus = el("p", { class: "status-line", role: "status" }),
     role: "status",
     id: "readiness-status",
   });
+const checkConnection = button("检查连接", () => checkEnvironment());
 const settingsForm = el("form", { novalidate: "", class: "settings-form" });
 const saveSettings = el(
   "button",
@@ -1092,19 +1119,13 @@ settingsForm.append(
   el(
     "div",
     { class: "panel" },
-    el("h2", {}, "浏览器连接"),
+    el("h2", {}, "Ego Lite 状态"),
     readinessStatus,
     el(
       "div",
       { class: "settings-row connection-row" },
       connectionStatus,
-      button("检查连接", () => checkEnvironment()),
-    ),
-    el(
-      "details",
-      { class: "browser-advanced" },
-      el("summary", {}, "高级"),
-      egoPath.node,
+      checkConnection,
     ),
   ),
   el("div", { class: "settings-actions" }, settingsStatus, saveSettings),
@@ -1117,7 +1138,6 @@ settingsForm.addEventListener("submit", async (e) => {
   try {
     await call("saveSettings", {
       apiKey: key.input.value,
-      egoPath: egoPath.input.value.trim(),
       judgmentEnabled: autoJudgment.checked,
       judgmentEngine: engine.value,
     });
@@ -1156,14 +1176,11 @@ settingsView.append(
 async function loadSettings() {
   try {
     const settings = await call<{
-      egoPath?: string;
       keyAvailable: boolean;
       judgmentEnabled?: boolean;
       judgmentEngine?: string;
       mcp: unknown;
     }>("settings");
-    if (document.activeElement !== egoPath.input && !egoPath.input.value)
-      egoPath.input.value = settings.egoPath || "";
     judgmentEnabled = settings.judgmentEnabled ?? true;
     autoJudgment.checked = judgmentEnabled;
     engine.value = settings.judgmentEngine ?? "jev";
@@ -1178,8 +1195,11 @@ async function loadSettings() {
   }
 }
 async function checkEnvironment() {
+  if (checkConnection.disabled) return;
+  checkConnection.disabled = true;
+  checkConnection.setAttribute("aria-busy", "true");
   setEnvironmentStatus("checking", "正在检查运行环境，点击打开设置");
-  status(connectionStatus, "正在检查 Ego Lite…");
+  status(connectionStatus, "正在自动连接 Ego Lite…");
   try {
     const env = await call<{
       egoReady: boolean;
@@ -1209,6 +1229,9 @@ async function checkEnvironment() {
   } catch (error) {
     status(connectionStatus, (error as Error).message, true);
     setEnvironmentStatus("error", "运行环境检查失败，点击检查设置");
+  } finally {
+    checkConnection.disabled = false;
+    checkConnection.removeAttribute("aria-busy");
   }
 }
 async function refresh() {
